@@ -1,69 +1,16 @@
 import streamlit as st
 from st_cytoscape import cytoscape
-import json
-import requests
-from sidebar_ import sidebar
+from config import *
+from sidebar_ui import sidebar_ui
+from filters_ui import filters_ui
 
-st.set_page_config(layout="wide", page_title="IKE - Interactive Knowledge Explorer")
+sidebar_ui()
 
-sidebar()
+# MAIN UI
+c1, c2, c3 = st.columns([1, 3, 1])
 
-if "NODES" not in st.session_state:
-    st.session_state["NODES"] = []
-if "EDGES" not in st.session_state:
-    st.session_state["EDGES"] = []
-
-
-# Get Node Labels
-nl_url = "http://localhost:8000/nodes/labels/"
-headers = {"Content-type": "application/json", "Accept": "text/plain"}
-nl = requests.get(nl_url, headers=headers)
-nl_json = nl.json()
-print(nl_json)
-
-# Get Relationship Types
-rt_url = "http://localhost:8000/relationships/types/"
-headers = {"Content-type": "application/json", "Accept": "text/plain"}
-rt = requests.get(rt_url, headers=headers)
-rt_json = rt.json()
-print(rt_json)
-
-
-c1, c2, c3 = st.columns(3)
 with c1:
-    st.subheader("Filters")
-    node_label_filtered = st.multiselect("Node Labels", nl_json, default=nl_json)
-    relationship_type_filtered = st.multiselect(
-        "Relationship Types", rt_json, default=rt_json
-    )
-
-    elements = []
-    if st.button("Update"):
-
-        params = {}
-
-        # Get Nodes
-        # if len(node_label_filtered) > 0:
-        url = "http://localhost:8000/nodes"
-        headers = {"Content-type": "application/json", "Accept": "text/plain"}
-        params.update({"labels": [node_label_filtered]})
-        n = requests.get(url, headers=headers, params=params)
-        n_json = n.json()
-        st.session_state["NODES"] = n_json
-
-        # Get Relationships
-        # if len(relationship_type_filtered) > 0:
-        url = "http://localhost:8000/relationships"
-        headers = {"Content-type": "application/json", "Accept": "text/plain"}
-
-        params.update(
-            {
-                "types": [relationship_type_filtered],
-            }
-        )
-        r = requests.get(url, headers=headers, params=params)
-        r_json = r.json()
-        st.session_state["EDGES"] = r_json
+    filters_ui()
 
 with c2:
     st.subheader("Graph")
@@ -91,14 +38,14 @@ with c2:
 with c3:
     st.write("Selected Nodes")
     for n_name in selected["nodes"]:
-        for element in elements:
-            if element["data"]["label"] == n_name:
+        for element in st.session_state[NODES_KEY]:
+            if element["data"]["id"] == n_name:
                 with st.expander(f"{n_name}"):
                     st.json(element["data"])
 
     st.write("Selected Relationships")
     for rel in selected["edges"]:
-        for element in elements:
-            if element["data"]["label"] == rel:
+        for element in st.session_state[RELS_KEY]:
+            if element["data"]["id"] == rel:
                 with st.expander(f"{rel}"):
                     st.json(element["data"])

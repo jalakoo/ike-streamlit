@@ -22,22 +22,10 @@ class Neo4jCredentials(BaseModel):
     database: Optional[str] = "neo4j"
 
     def __hash__(self):
-        return hash((type(self),) + tuple(self.dict().items()))
+        return hash((type(self),) + tuple(self.items()))
 
     def __xgetstate__(self):
         return self.__dict__
 
     def __setstate__(self, state):
         self.__dict__ = state
-
-
-def valid_credentials(creds: Neo4jCredentials) -> bool:
-    with GraphDatabase.driver(
-        creds.uri, auth=(creds.username, creds.password)
-    ) as driver:
-        try:
-            driver.verify_connectivity()
-            return True
-        except Exception as e:
-            print(e)
-            return False
