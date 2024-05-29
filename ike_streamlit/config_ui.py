@@ -4,6 +4,46 @@ import requests
 from data_ import get_schema, get_labels
 
 
+def connect():
+    # Validate connection
+    try:
+        v_url = st.session_state[DB_URI_KEY] + "/validate/"
+        headers = {
+            "Content-type": "application/json",
+            "Accept": "text/plain",
+        }
+        response = requests.post(
+            v_url,
+            headers=headers,
+            data=st.session_state[N4J_CREDS_KEY].json(),
+        )
+        if response.status_code == 200:
+
+            get_labels()
+
+            get_schema()
+
+            st.session_state[DID_CONNECT_KEY] = True
+
+            # Code for successful request
+            st.success(
+                f"Credentials valid and connected to {st.session_state[DB_URI_KEY]}"
+            )
+        else:
+            # Code for handling error response
+            st.session_state[DID_CONNECT_KEY] = False
+
+            st.error(
+                f"Problem connecting to {st.session_state[DB_URI_KEY]}: {response.text}"
+            )
+
+    except Exception as e:
+
+        st.session_state[DID_CONNECT_KEY] = False
+
+        st.error(f"Problem connecting to {st.session_state[DB_URI_KEY]}: {e}")
+
+
 def config_ui():
     server_url = st.text_input(
         "Server URL",
@@ -31,33 +71,38 @@ def config_ui():
     if creds != st.session_state[N4J_CREDS_KEY]:
         st.session_state[N4J_CREDS_KEY] = creds
 
+    if creds.is_ready() is False:
+        st.warning("Fill-in credentials then click 'Connect'")
+    elif st.session_state[DID_CONNECT_KEY] == False and creds.is_ready():
+        connect()
+
     if st.button("Connect"):
+        connect()
+        # # Validate connection
+        # try:
+        #     v_url = st.session_state[DB_URI_KEY] + "/validate/"
+        #     headers = {
+        #         "Content-type": "application/json",
+        #         "Accept": "text/plain",
+        #     }
+        #     response = requests.post(
+        #         v_url,
+        #         headers=headers,
+        #         data=st.session_state[N4J_CREDS_KEY].json(),
+        #     )
+        #     if response.status_code == 200:
 
-        # Validate connection
-        try:
-            v_url = st.session_state[DB_URI_KEY] + "/validate/"
-            headers = {
-                "Content-type": "application/json",
-                "Accept": "text/plain",
-            }
-            response = requests.post(
-                v_url,
-                headers=headers,
-                data=st.session_state[N4J_CREDS_KEY].json(),
-            )
-            if response.status_code == 200:
+        #         get_labels()
 
-                get_labels()
+        #         get_schema()
 
-                get_schema()
+        #         # Code for successful request
+        #         st.success(f"Credentials valid and connected to {server_url}")
+        #     else:
+        #         # Code for handling error response
+        #         st.error(
+        #             f"Problem connecting to {st.session_state[DB_URI_KEY]}: {response.text}"
+        #         )
 
-                # Code for successful request
-                st.success(f"Credentials valid and connected to {server_url}")
-            else:
-                # Code for handling error response
-                st.error(
-                    f"Problem connecting to {st.session_state[DB_URI_KEY]}: {response.text}"
-                )
-
-        except Exception as e:
-            st.error(f"Problem connecting to {st.session_state[DB_URI_KEY]}: {e}")
+        # except Exception as e:
+        #     st.error(f"Problem connecting to {st.session_state[DB_URI_KEY]}: {e}")

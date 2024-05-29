@@ -29,3 +29,14 @@ class Neo4jCredentials(BaseModel):
 
     def __setstate__(self, state):
         self.__dict__ = state
+
+    def is_ready(self):
+        if self.uri is None or self.uri == "":
+            return False
+        if self.password is None or self.password == "":
+            return False
+        if self.username is None or self.username == "":
+            return False
+        if self.database is None or self.database == "":
+            return False
+        return True

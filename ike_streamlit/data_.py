@@ -81,11 +81,13 @@ def refresh_graph(node_label_filtered, relationship_type_filtered):
         msg = f"Unexpected response data from Neo4j: {r_json}. Expected a list of Relationship records."
         print(msg)
         st.error(msg)
+        st.session_state[DID_REFRESH_KEY] = False
     else:
         print(f"Got {len(r_json)} relationships")
         if len(r_json) > 0:
             print(f"First relationship: {r_json[0]}")
         st.session_state[RELS_KEY] = r_json
+        st.session_state[DID_REFRESH_KEY] = True
 
 
 def get_relationships(creds: dict, url: str, labels: list[str], types: list[str] = []):
