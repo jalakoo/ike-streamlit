@@ -1,104 +1,112 @@
 import streamlit as st
 from st_cytoscape import cytoscape
-import json
-import requests
-from sidebar_ import sidebar
+from config import *
+from sidebar_ui import sidebar_ui
+from data_ import get_schema, refresh_graph
 
-st.set_page_config(layout="wide", page_title="IKE - Interactive Knowledge Explorer")
+# Configuration UI within sidebar
+sidebar_ui()
 
-sidebar()
+# CONNECTION INSTRUCTIONS
+if st.session_state[DID_CONNECT_KEY] == False:
+    st.info("<-- Connect to Neo4j to start")
+    st.stop()
 
-if "NODES" not in st.session_state:
-    st.session_state["NODES"] = []
-if "EDGES" not in st.session_state:
-    st.session_state["EDGES"] = []
-
-
-# Get Node Labels
-nl_url = "http://localhost:8000/nodes/labels/"
-headers = {"Content-type": "application/json", "Accept": "text/plain"}
-nl = requests.get(nl_url, headers=headers)
-nl_json = nl.json()
-print(nl_json)
-
-# Get Relationship Types
-rt_url = "http://localhost:8000/relationships/types/"
-headers = {"Content-type": "application/json", "Accept": "text/plain"}
-rt = requests.get(rt_url, headers=headers)
-rt_json = rt.json()
-print(rt_json)
-
-
+# MAIN UI
+st.title("Interactive Knowledge (Graph) Explorer")
 c1, c2, c3 = st.columns(3)
+
+cytoscape_stylesheet = [
+    {
+        "selector": "node",
+        "style": {"label": "data(label)", "width": 20, "height": 20},
+    },
+    {
+        "selector": "edge",
+        "style": {
+            "width": 3,
+            "curve-style": "bezier",
+            "target-arrow-shape": "triangle",
+        },
+    },
+]
+
+# DATA MODEL INTERFACE
 with c1:
-    st.subheader("Filters")
-    node_label_filtered = st.multiselect("Node Labels", nl_json, default=nl_json)
-    relationship_type_filtered = st.multiselect(
-        "Relationship Types", rt_json, default=rt_json
-    )
-
-    elements = []
-    if st.button("Update"):
-
-        params = {}
-
-        # Get Nodes
-        # if len(node_label_filtered) > 0:
-        url = "http://localhost:8000/nodes"
-        headers = {"Content-type": "application/json", "Accept": "text/plain"}
-        params.update({"labels": [node_label_filtered]})
-        n = requests.get(url, headers=headers, params=params)
-        n_json = n.json()
-        st.session_state["NODES"] = n_json
-
-        # Get Relationships
-        # if len(relationship_type_filtered) > 0:
-        url = "http://localhost:8000/relationships"
-        headers = {"Content-type": "application/json", "Accept": "text/plain"}
-
-        params.update(
-            {
-                "types": [relationship_type_filtered],
-            }
+    with st.container(border=True):
+        st.subheader("Data Model")
+        st.write(
+            "*Select Node Labels or Relationship Types to enable filtering. Deselect ALL to pull all Nodes and Relationships*"
         )
-        r = requests.get(url, headers=headers, params=params)
-        r_json = r.json()
-        st.session_state["EDGES"] = r_json
+        selected_datamodel = cytoscape(
+            st.session_state[SCHEMA_KEY],
+            cytoscape_stylesheet,
+            key="data-model",
+            height="200px",
+        )
 
+    with st.container(border=True):
+        # st.write("Node Labels")
+        selected_nodes = []
+        for n_name in selected_datamodel["nodes"]:
+            for element in st.session_state[SCHEMA_KEY]:
+                if element["data"]["id"] == n_name:
+                    label = element["data"]["label"]
+                    selected_nodes.append(label)
+                    with st.expander(f"{label}"):
+                        st.json(element["data"])
+                        # TODO: Allow for key selection
+
+        # st.write("Relationship Types")
+        selected_rels = []
+        for rel in selected_datamodel["edges"]:
+            for element in st.session_state[SCHEMA_KEY]:
+                if element["data"]["id"] == rel:
+                    label = element["data"]["label"]
+                    selected_rels.append(label)
+                    with st.expander(f"{label}"):
+                        st.json(element["data"])
+                        # TODO: Allow for key selection
+
+    if st.session_state[DID_REFRESH_KEY] == False:
+        b_title = "Load Graph"
+    else:
+        b_title = "Refresh Graph"
+    if st.button(b_title, key="refresh-graph"):
+        refresh_graph(selected_nodes, selected_rels)
+
+# GRAPH DATA INTERFACE
 with c2:
-    st.subheader("Graph")
-    stylesheet = [
-        {
-            "selector": "node",
-            "style": {"label": "data(label)", "width": 20, "height": 20},
-        },
-        {
-            "selector": "edge",
-            "style": {
-                "width": 3,
-                "curve-style": "bezier",
-                "target-arrow-shape": "triangle",
-            },
-        },
-    ]
+    # Load instructions
+    if st.session_state[DID_REFRESH_KEY] == False:
+        st.stop()
 
-    selected = cytoscape(
-        st.session_state["NODES"] + st.session_state["EDGES"],
-        stylesheet,
-        key="graph",
-    )
+    # Display Graph
+    with st.container(border=True):
+        st.subheader("Graph Data")
+        st.write("*Select Nodes and/or Relationships to enable editing*")
+        selected_data = cytoscape(
+            st.session_state[NODES_KEY] + st.session_state[RELS_KEY],
+            cytoscape_stylesheet,
+            key="graph",
+            height="600px",
+        )
 
+
+# GRAPH DATA SELECTIONS
 with c3:
-    st.write("Selected Nodes")
-    for n_name in selected["nodes"]:
-        for element in elements:
-            if element["data"]["label"] == n_name:
-                with st.expander(f"{n_name}"):
-                    st.json(element["data"])
+    with st.container(border=True):
+        st.subheader("SELECTIONS")
+        st.write("Nodes")
+        for n_name in selected_data["nodes"]:
+            for element in st.session_state[NODES_KEY]:
+                if element["data"]["id"] == n_name:
+                    with st.expander(f"{n_name}"):
+                        st.json(element["data"])
 
-    st.write("Selected Relationships")
-    for rel in selected["edges"]:
-        for element in elements:
-            if element["data"]["label"] == rel:
-                with st.expander(f"{rel}"):
-                    st.json(element["data"])
+        st.write("Relationships")
+        for rel in selected_data["edges"]:
+            for element in st.session_state[RELS_KEY]:
+                if element["data"]["id"] == rel:
+                    with st.expander(f"{rel}"):
+                        st.json(element["data"])
