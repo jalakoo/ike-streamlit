@@ -13,6 +13,9 @@ N4J_URI_KEY = "NEO4J_URI"
 N4J_USERNAME_KEY = "NEO4J_USERNAME"
 N4J_PASSWORD_KEY = "NEO4J_PASSWORD"
 N4J_DATABASE_KEY = "NEO4J_DATABASE"
+NODE_LABELS_KEY = "NODE_LABELS"
+REL_TYPES_KEY = "EDGE_TYPES"
+SCHEMA_KEY = "SCHEMA"
 NODES_KEY = "NODES"
 RELS_KEY = "EDGES"
 
@@ -32,6 +35,12 @@ if N4J_CREDS_KEY not in st.session_state:
 if DB_URI_KEY not in st.session_state:
     st.session_state[DB_URI_KEY] = ENV_DB_URI
 
+if SCHEMA_KEY not in st.session_state:
+    st.session_state[SCHEMA_KEY] = []
+if NODE_LABELS_KEY not in st.session_state:
+    st.session_state[NODE_LABELS_KEY] = []
+if REL_TYPES_KEY not in st.session_state:
+    st.session_state[REL_TYPES_KEY] = []
 if NODES_KEY not in st.session_state:
     st.session_state[NODES_KEY] = []
 if RELS_KEY not in st.session_state:
